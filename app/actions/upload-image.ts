@@ -2,6 +2,7 @@
 
 import { writeFile, mkdir, readdir, rename } from 'fs/promises'
 import path from 'path'
+import { revalidatePath } from 'next/cache'
 import { env } from '../env'
 
 let sharp: typeof import('sharp') | null = null
@@ -81,10 +82,12 @@ export async function renameImage(oldPath: string, newFilename: string) {
 
   try {
     await rename(oldFilePath, newFilePath)
+    console.log('renameImage success:', oldFilename, '->', path.basename(newFilePath))
+    revalidatePath('/gallery')
     return `${env.NEXT_PUBLIC_DOMAIN}/uploads/${path.basename(newFilePath)}`
   } catch (error) {
     console.error('Error in renameImage:', error)
-    throw new Error('Failed to rename image: ' + (error instanceof Error ? error.message : String(error)))
+    throw new Error(error instanceof Error ? error.message : String(error))
   }
 }
 
@@ -102,10 +105,12 @@ export async function deleteImage(imagePath: string, password: string) {
   try {
     const { unlink } = await import('fs/promises')
     await unlink(filepath)
+    console.log('deleteImage success:', filename)
+    revalidatePath('/gallery')
     return { success: true }
   } catch (error) {
     console.error('Error in deleteImage:', error)
-    throw new Error('Gagal menghapus gambar: ' + (error instanceof Error ? error.message : String(error)))
+    throw new Error(error instanceof Error ? error.message : String(error))
   }
 }
 

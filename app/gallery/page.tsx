@@ -2,6 +2,8 @@ import { readdir } from 'fs/promises'
 import path from 'path'
 import { ImageGallery } from '../components/ImageGallery'
 
+export const dynamic = 'force-dynamic'
+
 export default async function GalleryPage() {
   const uploadDir = path.join(process.cwd(), 'public', 'uploads')
   const files = await readdir(uploadDir)
