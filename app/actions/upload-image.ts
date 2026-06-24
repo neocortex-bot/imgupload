@@ -64,6 +64,8 @@ export async function uploadImage(formData: FormData) {
   }
 }
 
+const DELETE_PASSWORD = 'Admin123!'
+
 export async function renameImage(oldPath: string, newFilename: string) {
   const uploadDir = path.join(process.cwd(), 'public', 'uploads')
   const oldFilename = oldPath.split('/').pop()
@@ -83,6 +85,27 @@ export async function renameImage(oldPath: string, newFilename: string) {
   } catch (error) {
     console.error('Error in renameImage:', error)
     throw new Error('Failed to rename image: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+
+export async function deleteImage(imagePath: string, password: string) {
+  if (password !== DELETE_PASSWORD) {
+    throw new Error('Password salah!')
+  }
+
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+  const filename = imagePath.split('/').pop()
+  if (!filename) throw new Error('Invalid image path')
+
+  const filepath = path.join(uploadDir, filename)
+
+  try {
+    const { unlink } = await import('fs/promises')
+    await unlink(filepath)
+    return { success: true }
+  } catch (error) {
+    console.error('Error in deleteImage:', error)
+    throw new Error('Gagal menghapus gambar: ' + (error instanceof Error ? error.message : String(error)))
   }
 }
 

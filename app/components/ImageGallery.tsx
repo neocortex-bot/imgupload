@@ -16,7 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { renameImage } from '../actions/upload-image'
+import { renameImage, deleteImage } from '../actions/upload-image'
 
 interface ImageGalleryProps {
   images: string[]
@@ -34,6 +34,11 @@ export function ImageGallery({ images }: ImageGalleryProps) {
   const [renameError, setRenameError] = useState('')
   const [renaming, setRenaming] = useState(false)
 
+  // Delete state
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
   const handleCopy = useCallback((imagePath: string, index: number) => {
     const fullUrl = `${env.NEXT_PUBLIC_DOMAIN}/uploads/${imagePath}`
     const htmlSnippet = `<img src="${fullUrl}" alt="Gallery image" />`
@@ -47,6 +52,8 @@ export function ImageGallery({ images }: ImageGalleryProps) {
     const ext = filename.includes('.') ? filename.substring(filename.lastIndexOf('.')) : ''
     setRenameDialog({ open: true, filename: nameWithoutExt, index })
     setRenameError('')
+    setDeletePassword('')
+    setDeleteError('')
   }, [])
 
   const handleRename = useCallback(async () => {
@@ -76,6 +83,36 @@ export function ImageGallery({ images }: ImageGalleryProps) {
       setRenaming(false)
     }
   }, [imageList, renameDialog])
+
+  const handleDelete = useCallback(async () => {
+    if (!deletePassword) {
+      setDeleteError('Masukkan password!')
+      return
+    }
+
+    const filename = imageList[renameDialog.index]
+
+    setDeleting(true)
+    try {
+      await deleteImage(filename, deletePassword)
+      // Remove from list
+      const updatedList = imageList.filter((_, i) => i !== renameDialog.index)
+      setImageList(updatedList)
+      setRenameDialog({ open: false, filename: '', index: -1 })
+      setDeletePassword('')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Gagal hapus gambar')
+    } finally {
+      setDeleting(false)
+    }
+  }, [imageList, renameDialog, deletePassword])
+
+  const closeDialog = useCallback(() => {
+    setRenameDialog({ open: false, filename: '', index: -1 })
+    setDeletePassword('')
+    setDeleteError('')
+    setRenameError('')
+  }, [])
 
   return (
     <>
@@ -115,7 +152,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
         ))}
       </div>
 
-      <Dialog open={renameDialog.open} onOpenChange={(open) => setRenameDialog(prev => ({ ...prev, open }))}>
+      <Dialog open={renameDialog.open} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Image</DialogTitle>
@@ -123,7 +160,7 @@ export function ImageGallery({ images }: ImageGalleryProps) {
               Masukkan nama baru untuk file ini. Ekstensi file akan tetap dipertahankan.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <Input
               value={renameDialog.filename}
               onChange={(e) => setRenameDialog(prev => ({ ...prev, filename: e.target.value }))}
@@ -132,19 +169,41 @@ export function ImageGallery({ images }: ImageGalleryProps) {
               autoFocus
             />
             {renameError && (
-              <p className="text-sm text-red-500 mt-2">{renameError}</p>
+              <p className="text-sm text-red-500">{renameError}</p>
             )}
+
+            <hr className="border-t" />
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">Delete Image</p>
+              <Input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleDelete() }}
+                placeholder="Masukkan password untuk hapus"
+              />
+              {deleteError && (
+                <p className="text-sm text-red-500">{deleteError}</p>
+              )}
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between sm:justify-between">
             <Button
-              variant="outline"
-              onClick={() => setRenameDialog({ open: false, filename: '', index: -1 })}
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
             >
-              Batal
+              {deleting ? 'Menghapus...' : 'Hapus'}
             </Button>
-            <Button onClick={handleRename} disabled={renaming}>
-              {renaming ? 'Menyimpan...' : 'Simpan'}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeDialog}>
+                Batal
+              </Button>
+              <Button onClick={handleRename} disabled={renaming}>
+                {renaming ? 'Menyimpan...' : 'Simpan'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
